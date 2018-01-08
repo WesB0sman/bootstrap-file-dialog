@@ -10,6 +10,7 @@
     font-size: 32px;
     text-align: center;
 
+
     &:hover,
     &.bfd-dragover {
         border-color: #bbb;
@@ -20,6 +21,12 @@
 .bfd-info {
     overflow: hidden;
     white-space: nowrap;
+    padding-left: 0px;
+    text-overflow: ellipsis;
+}
+
+.bfd-progress{
+    padding-right: 0px;
 }
 
 .bfd-error-message {
@@ -28,4 +35,8 @@
 
 .bfd-remove {
     cursor: pointer;
+}
+
+.bfd-input{
+    width: 100%;
 }

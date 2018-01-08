@@ -23,10 +23,10 @@ var fd = $.FileDialog(options);
 
 Supported options:
 
-* `accept`: MIME type of accepted files, e. g. `image/jpeg`. String. Default: `*`.
+* `accept`: an array of accepted files type extensions as strings ex. ['.pdf', '.csv', '.docx'].
 * `dropheight`: the height of drop zone in pixels. Number. Default: `400`.
 * `multiple`: whether it is possible to choose multiple files or not. Boolean.
-    Default: `true`. **Choosing single file is not yet implemented**, sorry.
+    Default: `true`.
 * `readAs`: file reading mode. String. Supported values: `BinaryString`, `Text`,
     `DataURL`, `ArrayBuffer` (case sensitive). Default: `DataURL`.
 

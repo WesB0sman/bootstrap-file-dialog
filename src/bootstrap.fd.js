@@ -5,6 +5,19 @@
 (function($) {
 "use strict";
 
+// An array of default file types for the file dialog to accept
+var defaultFileTypes = [
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.gif',
+    '.xls',
+    '.xlsx',
+    '.doc',
+    '.docx',
+    '.pdf'
+]
+
 $.FileDialog = function FileDialog(userOptions) {
     var options = $.extend($.FileDialog.defaults, userOptions),
         modal = $([
@@ -15,7 +28,7 @@ $.FileDialog = function FileDialog(userOptions) {
             "                <button type='button' class='close' data-dismiss='modal'>",
             "                    <span aria-hidden='true'>&times;</span>",
             "                    <span class='sr-only'>",
-                                     options.cancel_button,
+                                        options.cancel_button,
             "                    </span>",
             "                </button>",
             "                <h4 class='modal-title'>",
@@ -23,10 +36,10 @@ $.FileDialog = function FileDialog(userOptions) {
             "                </h4>",
             "            </div>",
             "            <div class='modal-body'>",
-            "                <input type='file' />",
+            "                <input class='bfd-input' type='file' />",
             "                <div class='bfd-dropfield'>",
             "                    <div class='bfd-dropfield-inner'>",
-                                     options.drag_message,
+                                        options.drag_message,
             "                    </div>",
             "                </div>",
             "                <div class='container-fluid bfd-files'>",
@@ -34,11 +47,11 @@ $.FileDialog = function FileDialog(userOptions) {
             "            </div>",
             "            <div class='modal-footer'>",
             "                <button type='button' class='btn btn-primary bfd-ok'>",
-                                 options.ok_button,
+                                    options.ok_button,
             "                </button>",
             "                <button type='button' class='btn btn-default bfd-cancel'",
             "                                data-dismiss='modal'>",
-                                 options.cancel_button,
+                                    options.cancel_button,
             "                </button>",
             "            </div>",
             "        </div>",
@@ -56,8 +69,19 @@ $.FileDialog = function FileDialog(userOptions) {
     });
 
     input.attr({
-        "accept": options.accept,
-        "multiple": options.multiple
+        accept: function(){
+            var acceptArrayIsValid = checkAcceptedFileTypeArgumentIsArray();
+
+            if( acceptArrayIsValid && options.accept.length > 0 ){
+                return options.accept.join(',');
+            }
+            else{
+                return defaultFileTypes.join(',');
+            }
+        },
+        multiple: function(){
+            if( options.multiple === true ){ return "multiple"; } else { return false; }
+        }
     });
 
     dropfield.on("click.bfd", function() {
@@ -65,18 +89,40 @@ $.FileDialog = function FileDialog(userOptions) {
     });
 
     var loadedFiles = [],
-        readers = [];
+        readers = [],
+        progressBars = [],
+        rows = [];
+
+    function checkAcceptedFileTypeArgumentIsArray(){
+        return Array.isArray(options.accept);
+    }
+    // Check against the array of passed in options that the file extension is accepted
+    // Could also check the files mime type
+    function checkPassedInFileTypeIsAccepted(file){
+        var acceptedRegexString = '(\.' + options.accept.join('|\.') + ')';
+        var acceptedFileRegularExpression = new RegExp(acceptedRegexString)
+        var result = acceptedFileRegularExpression.exec(file.name);
+        return result;
+    }
 
     var loadFile = function(f) {
         var reader = new FileReader(),
             progressBar,
             row;
 
-        readers.push(reader);
+        // Variables to track if we should load the file
+        var acceptArrayIsValid   = checkAcceptedFileTypeArgumentIsArray();
+        var fileTypeIsAcceptable = checkPassedInFileTypeIsAccepted(f);
+        
+        // This does not seem to work as expected
+        if( options.multiple === true ){
+            readers.push(reader);
+        }
+        else{
+            readers[0] = reader;
+        }
 
-        reader.onloadstart = function() {
-
-        };
+        reader.onloadstart = function() { };
 
         reader.onerror = function(e) {
             if(e.target.error.code === e.target.error.ABORT_ERR) {
@@ -91,23 +137,31 @@ $.FileDialog = function FileDialog(userOptions) {
 
         reader.onprogress = function(e) {
             var percentLoaded = Math.round(e.loaded * 100 / e.total) + "%";
-            progressBar.attr("aria-valuenow", e.loaded);
-            progressBar.css ("width", percentLoaded);
-            $(".sr-only", progressBar).text(percentLoaded);
+            progressBar.attr("aria-valuenow", e.loaded)
+                        .css ("width", percentLoaded)
+                        .text(percentLoaded);
         };
 
         reader.onload = function(e) {
             f.content = e.target.result;
-            loadedFiles.push(f);
+
+            // This if statement restricts the uploaded content if multiple files are not turned on
+            if( options.multiple === true ){
+                loadedFiles.push(f);
+            }
+            else{
+                loadedFiles[0] = f;
+            }
+
             progressBar.removeClass("active");
         };
 
         var progress = $([
-            "<div class='col-xs-7 col-sm-4 bfd-info'>",
+            "<div class='col-xs-7 col-sm-6 bfd-info'>",
             "    <span class='glyphicon glyphicon-remove bfd-remove'></span>&nbsp;",
             "    <span class='glyphicon glyphicon-file'></span>&nbsp;" + f.name,
             "</div>",
-            "<div class='col-xs-5 col-sm-8 bfd-progress'>",
+            "<div class='col-xs-5 col-sm-6 bfd-progress'>",
             "    <div class='progress'>",
             "        <div class='progress-bar progress-bar-striped active' role='progressbar'",
             "            aria-valuenow='0' aria-valuemin='0' aria-valuemax='" + f.size + "'>",
@@ -130,11 +184,38 @@ $.FileDialog = function FileDialog(userOptions) {
             row.fadeOut();
             try { reader.abort(); } catch(e) { }
         });
+
         row = $("<div class='row'></div>");
         row.append(progress);
-        $(".bfd-files", modal).append(row);
 
-        reader["readAs" + options.readAs](f);
+        // Check if we are allowed to upload multiple files
+        if( options.multiple === true ){
+            progressBars.push(progressBar);
+            rows.push(row);
+        }
+        else{
+            progressBars[0] = progressBar;
+            // If we are only supposed to allow one file detatch the previous row if there is one
+            if( rows[0] !== undefined ){ rows[0].detach(); }
+            rows[0] = row;
+        }
+        
+
+        if( acceptArrayIsValid && fileTypeIsAcceptable !== null ){
+            reader["readAs" + options.readAs](f);
+            $(".bfd-files", modal).append(row);
+            $('.bfd-file-type-error').detach();
+        }
+        else{
+            var errorString   = "<p></p><p>Error unrecognized file type for file: " + f.name + "</p>"; 
+            var errorAccepted = "<p>The accepted file types are: " + options.accept.join(", ") + "</p>";
+            var errorDiv = $('<div/>').addClass('bfd-file-type-error')
+                                        .addClass('text-danger')
+                                        .append(errorString)
+                                        .append(errorAccepted);
+            $('.bfd-input').after(errorDiv);
+        }
+        
     };
 
     var loadFiles = function loadFiles(flist) {
@@ -166,6 +247,7 @@ $.FileDialog = function FileDialog(userOptions) {
         e.stopPropagation();
         e.preventDefault();
         var files = e.dataTransfer.files;
+
         if(files.length === 0) {
             // problem with desktop/browser
             // ... TODO
@@ -196,8 +278,9 @@ $.FileDialog = function FileDialog(userOptions) {
     return modal;
 };
 
+/** Accept an array of file types **/
 $.FileDialog.defaults = {
-    "accept": "*", /* e.g. 'image/*' */
+    "accept": defaultFileTypes, 
     "cancel_button": "Close",
     "drag_message": "Drop files here",
     "dropheight": 400,

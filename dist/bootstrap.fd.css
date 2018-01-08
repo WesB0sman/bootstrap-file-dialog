@@ -14,10 +14,18 @@
 
 .bfd-info {
   overflow: hidden;
-  white-space: nowrap; }
+  white-space: nowrap;
+  padding-left: 0px;
+  text-overflow: ellipsis; }
+
+.bfd-progress {
+  padding-right: 0px; }
 
 .bfd-error-message {
   text-align: center; }
 
 .bfd-remove {
   cursor: pointer; }
+
+.bfd-input {
+  width: 100%; }
